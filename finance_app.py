@@ -1,14 +1,13 @@
 import mysql.connector
 import bcrypt
-from getpass import getpass
-import datetime
+from datetime import datetime
 
 # Database configuration
 db_config = {
     "host": "localhost",
     "user": "root",
     "password": "your_new_password",
-    "database": "finance_app"
+    "database": "finance_db"
 }
 
 # Function to create a connection to the database
@@ -32,7 +31,7 @@ def register_user(username, password):
     # Insert user into the users table
     try:
         cursor.execute(
-            "INSERT INTO users (username, password) VALUES (%s, %s)",
+            "INSERT INTO Users (username, password) VALUES (%s, %s)",
             (username, hashed_password)
         )
         conn.commit()
@@ -50,12 +49,12 @@ def login_user(username, password):
     cursor = conn.cursor()
 
     # Query to fetch user details
-    cursor.execute("SELECT username, password FROM users WHERE username = %s", (username,))
+    cursor.execute("SELECT ID, password FROM Users WHERE username = %s", (username,))
     user = cursor.fetchone()
 
-    if user and bcrypt.checkpw(password.encode('utf-8'), user[1]):
+    if user and bcrypt.checkpw(password.encode('utf-8'), user[1].encode('utf-8')):
         print("Login successful.")
-        return user[0]  # Return the username (or user ID if needed)
+        return user[0]  # Return the user ID instead of username
     else:
         print("Invalid credentials.")
         return None
@@ -71,7 +70,7 @@ def add_transaction(user_id, category, amount, transaction_type):
 
     try:
         cursor.execute(
-            "INSERT INTO transactions (user_id, category, amount, date, description, transaction_type) "
+            "INSERT INTO Transactions (user_id, category, amount, date, description, transaction_type) "
             "VALUES (%s, %s, %s, %s, %s, %s)",
             (user_id, category, amount, date, description, transaction_type)
         )
@@ -92,7 +91,7 @@ def generate_reports(user_id):
     # Monthly report
     month = input("Enter month (YYYY-MM): ")
     cursor.execute(
-        "SELECT SUM(amount) FROM transactions WHERE user_id = %s AND date LIKE %s",
+        "SELECT SUM(amount) FROM Transactions WHERE user_id = %s AND date LIKE %s",
         (user_id, f"{month}%")
     )
     total_income_expenses = cursor.fetchone()
@@ -101,7 +100,7 @@ def generate_reports(user_id):
     # Yearly report
     year = input("Enter year (YYYY): ")
     cursor.execute(
-        "SELECT SUM(amount) FROM transactions WHERE user_id = %s AND date LIKE %s",
+        "SELECT SUM(amount) FROM Transactions WHERE user_id = %s AND date LIKE %s",
         (user_id, f"{year}%")
     )
     total_income_expenses_year = cursor.fetchone()
@@ -109,6 +108,26 @@ def generate_reports(user_id):
 
     cursor.close()
     conn.close()
+
+# Delete the user login details
+def delete_account(user_id):
+    """Delete the user account"""
+    conn = create_connection()
+    cursor = conn.cursor()
+
+    conf = input("Are you sure you want to delete? (Y/N)")
+    if conf.lower() == "y":
+        try:
+            cursor.execute("DELETE FROM Users WHERE ID = %s", (user_id,))
+            conn.commit()
+            print("Account deleted successfully.")
+        except mysql.connector.Error as err:
+            print(f"Error: {err}")
+        finally:
+            cursor.close()
+            conn.close()
+    else:
+        print("Cancelled the delete process.")
 
 # Main menu function to navigate the application
 def main():
@@ -136,7 +155,8 @@ def main():
                     print("\n1. Add Income")
                     print("2. Add Expense")
                     print("3. Generate Reports")
-                    print("4. Logout")
+                    print("4. Delete Account")
+                    print("5. Logout")
                     action_choice = input("Select an option: ")
 
                     if action_choice == '1':
@@ -150,6 +170,8 @@ def main():
                     elif action_choice == '3':
                         generate_reports(user_id)
                     elif action_choice == '4':
+                        delete_account(user_id)
+                    elif action_choice == '5':
                         print("Logging out...")
                         break
                     else:

@@ -17,6 +17,7 @@ This application helps individuals keep track of their financial health by provi
 - **User Login**: Allows users to log in securely.
 - **Income/Expense Management**: Add income or expense entries, and categorize them.
 - **Financial Report Generation**: Generate a report showing total income, expenses, and savings over a given time range.
+- **Delete Account**: Allow users to delete the account securely.
 - **Data Persistence**: All user data is stored in a MySQL database for persistence.
 
 ---
