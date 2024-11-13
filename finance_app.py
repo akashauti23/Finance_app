@@ -25,6 +25,10 @@ def register_user(username, password):
     conn = create_connection()
     cursor = conn.cursor()
 
+    if not username or not password:
+        print("Username and password are required to register.")
+        return
+
     # Hash the password before storing it
     hashed_password = hash_password(password)
 
@@ -48,6 +52,10 @@ def login_user(username, password):
     conn = create_connection()
     cursor = conn.cursor()
 
+    if not username or not password:
+        print("Both username and password are required for login.")
+        return None
+
     # Query to fetch user details
     cursor.execute("SELECT ID, password FROM Users WHERE username = %s", (username,))
     user = cursor.fetchone()
@@ -59,28 +67,60 @@ def login_user(username, password):
         print("Invalid credentials.")
         return None
 
-# Function to add a transaction (income/expense)
+# Function to add a transaction (income/expense) and check if the budget is exceeded
 def add_transaction(user_id, category, amount, transaction_type):
-    """Adds a transaction (income or expense)"""
+    """Adds a transaction (income or expense) and checks for budget exceedance"""
     conn = create_connection()
     cursor = conn.cursor()
 
-    date = input("Enter date (YYYY-MM-DD): ") or datetime.now().strftime("%Y-%m-%d")
-    description = input("Enter description: ")
+    if not category or not amount or not transaction_type:
+        print("Category, amount, and transaction type are required for adding a transaction.")
+        return
 
     try:
-        cursor.execute(
-            "INSERT INTO Transactions (user_id, category, amount, date, description, transaction_type) "
-            "VALUES (%s, %s, %s, %s, %s, %s)",
-            (user_id, category, amount, date, description, transaction_type)
-        )
+        date = input("Enter date (YYYY-MM-DD): ") or datetime.now().strftime("%Y-%m-%d")
+        description = input("Enter description: ") or "No description provided"
+
+        # Insert the transaction into the Transactions table
+        cursor.execute("""
+            INSERT INTO Transactions (user_id, category, amount, date, description, transaction_type) 
+            VALUES (%s, %s, %s, %s, %s, %s)
+        """, (user_id, category, amount, date, description, transaction_type))
         conn.commit()
+
+        # Check if the transaction is an expense and if it exceeds the budget
+        if transaction_type == 'expense':
+            cursor.execute("""
+                SELECT amount FROM Budgets WHERE user_id = %s AND category = %s
+            """, (user_id, category))
+            budget = cursor.fetchone()
+
+            if budget:
+                budget_amount = budget[0]
+
+                # Calculate the total expenses for the current month
+                cursor.execute("""
+                    SELECT SUM(amount) FROM Transactions 
+                    WHERE user_id = %s AND transaction_type = 'expense' AND category = %s AND date LIKE %s
+                """, (user_id, category, f"{datetime.now().strftime('%Y-%m')}%"))
+                total_expenses_month = cursor.fetchone()[0] or 0
+
+                # Compare total expenses against the budget
+                if total_expenses_month > budget_amount:
+                    print(f"Alert: You have exceeded your total budget for {category}. Total expenses: {total_expenses_month}, Budget: {budget_amount}.")
+                else:
+                    print(f"Your {category} budget is under control. You have spent {total_expenses_month} out of {budget_amount} this month.")
+            else:
+                print(f"No budget set for {category}.")
+        
         print(f"{transaction_type.capitalize()} of {amount} added successfully.")
+    
     except mysql.connector.Error as err:
         print(f"Error: {err}")
     finally:
         cursor.close()
         conn.close()
+
 
 # Function to generate monthly and yearly reports
 def generate_reports(user_id):
@@ -88,8 +128,11 @@ def generate_reports(user_id):
     conn = create_connection()
     cursor = conn.cursor()
 
-    # Monthly report
     month = input("Enter month (YYYY-MM): ")
+    if not month:
+        print("Month is required for generating a report.")
+        return
+
     cursor.execute(
         "SELECT SUM(amount) FROM Transactions WHERE user_id = %s AND date LIKE %s",
         (user_id, f"{month}%")
@@ -97,8 +140,11 @@ def generate_reports(user_id):
     total_income_expenses = cursor.fetchone()
     print(f"Total transactions in {month}: {total_income_expenses[0]}")
 
-    # Yearly report
     year = input("Enter year (YYYY): ")
+    if not year:
+        print("Year is required for generating a report.")
+        return
+
     cursor.execute(
         "SELECT SUM(amount) FROM Transactions WHERE user_id = %s AND date LIKE %s",
         (user_id, f"{year}%")
@@ -106,6 +152,42 @@ def generate_reports(user_id):
     total_income_expenses_year = cursor.fetchone()
     print(f"Total transactions in {year}: {total_income_expenses_year[0]}")
 
+    cursor.execute("SELECT * FROM Transactions WHERE user_id = %s", (user_id,))
+    report = cursor.fetchall()  # This fetches all the data
+    cursor.close()
+    conn.close()
+    return report
+
+# Function to set a budget for a user
+def set_budget(user_id, category, amount):
+    """Set or update a budget for a category"""
+    conn = create_connection()
+    cursor = conn.cursor()
+
+    if not category or not amount:
+        print("Category and amount are required for setting a budget.")
+        return
+
+    # Check if the budget already exists for the specified category
+    cursor.execute("""
+        SELECT * FROM Budgets WHERE user_id = %s AND category = %s
+    """, (user_id, category))
+    existing_budget = cursor.fetchone()
+
+    if existing_budget:
+        # If budget exists, update it
+        cursor.execute("""
+            UPDATE Budgets SET amount = %s WHERE user_id = %s AND category = %s
+        """, (amount, user_id, category))
+        print(f"Budget for {category} updated to {amount}.")
+    else:
+        # If no budget exists, insert a new one
+        cursor.execute("""
+            INSERT INTO Budgets (user_id, category, amount) VALUES (%s, %s, %s)
+        """, (user_id, category, amount))
+        print(f"Budget for {category} set to {amount}.")
+    
+    conn.commit()
     cursor.close()
     conn.close()
 
@@ -115,8 +197,12 @@ def delete_account(user_id):
     conn = create_connection()
     cursor = conn.cursor()
 
-    conf = input("Are you sure you want to delete? (Y/N)")
-    if conf.lower() == "y":
+    if not user_id:
+        print("User ID is required to delete the account.")
+        return
+
+    conf = input("Are you sure you want to delete? (Y/N): ").lower()
+    if conf == "y":
         try:
             cursor.execute("DELETE FROM Users WHERE ID = %s", (user_id,))
             conn.commit()
@@ -154,24 +240,38 @@ def main():
                 while True:
                     print("\n1. Add Income")
                     print("2. Add Expense")
-                    print("3. Generate Reports")
-                    print("4. Delete Account")
-                    print("5. Logout")
+                    print("3. Set Budget")
+                    print("4. Generate Reports")
+                    print("5. Delete Account")
+                    print("6. Logout")
                     action_choice = input("Select an option: ")
 
                     if action_choice == '1':
                         category = input("Enter income category: ")
-                        amount = float(input("Enter amount: "))
-                        add_transaction(user_id, category, amount, 'income')
+                        amount = input("Enter amount: ")
+                        if amount:
+                            add_transaction(user_id, category, float(amount), 'income')
+                        else:
+                            print("Amount is required for income.")
                     elif action_choice == '2':
                         category = input("Enter expense category: ")
-                        amount = float(input("Enter amount: "))
-                        add_transaction(user_id, category, amount, 'expense')
+                        amount = input("Enter amount: ")
+                        if amount:
+                            add_transaction(user_id, category, float(amount), 'expense')
+                        else:
+                            print("Amount is required for expense.")
                     elif action_choice == '3':
-                        generate_reports(user_id)
+                        category = input("Enter category to set budget for: ")
+                        amount = input("Enter budget amount: ")
+                        if amount:
+                            set_budget(user_id, category, float(amount))
+                        else:
+                            print("Amount is required to set a budget.")
                     elif action_choice == '4':
-                        delete_account(user_id)
+                        generate_reports(user_id)
                     elif action_choice == '5':
+                        delete_account(user_id)
+                    elif action_choice == '6':
                         print("Logging out...")
                         break
                     else:
@@ -179,10 +279,8 @@ def main():
             else:
                 print("Login failed.")
         elif choice == '3':
-            print("Exiting...")
-            break
-        else:
-            print("Invalid choice. Please try again.")
+            print
+
 
 if __name__ == '__main__':
     main()
