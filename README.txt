@@ -32,4 +32,4 @@ This application helps individuals keep track of their financial health by provi
 
 1. **Clone the Repository:**
    ```bash
-   git clone https://github.com/your-username/finance_manager.git
+   git clone https://github.com/akashauti23/Finance_app.git
