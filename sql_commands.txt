@@ -1,20 +1,20 @@
-CREATE DATABASE finance_app;
-USE finance_app;
+CREATE DATABASE finance_db;
+USE finance_db;
 
 CREATE TABLE Users (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    username VARCHAR(50) UNIQUE,
-    password VARCHAR(255)
+    username VARCHAR(255) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL
 );
 
-CREATE TABLE Transactions (
+CREATE TABLE transactions (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT,
+    category VARCHAR(255),
     amount DECIMAL(10, 2),
-    category VARCHAR(50),
-    type ENUM('income', 'expense'),
     date DATE,
     description TEXT,
+    transaction_type ENUM('income', 'expense'),
     FOREIGN KEY (user_id) REFERENCES Users(id)
 );
 
