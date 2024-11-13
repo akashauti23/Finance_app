@@ -33,3 +33,11 @@ This application helps individuals keep track of their financial health by provi
 1. **Clone the Repository:**
    ```bash
    git clone https://github.com/akashauti23/Finance_app.git
+
+2. **Start the Application**
+   ```bash
+   python finance_app.py
+
+3. **To Run the Mock Test**
+   ```bash
+   python -m unittest tests/test_finance_app.py
