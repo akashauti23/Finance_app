@@ -23,7 +23,7 @@ This application helps individuals keep track of their financial health by provi
 
 ## Requirements
 
-- **Python 3.6 or higher**
+- **Python 3.11.6**
 - **MySQL Database**
 
 ---
