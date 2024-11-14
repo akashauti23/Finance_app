@@ -279,8 +279,8 @@ def main():
             else:
                 print("Login failed.")
         elif choice == '3':
-            print
-
+            print("Exiting...")
+            break
 
 if __name__ == '__main__':
     main()
