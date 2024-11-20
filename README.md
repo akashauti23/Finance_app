@@ -42,3 +42,10 @@ This application helps individuals keep track of their financial health by provi
 3. **To Run the Mock Test**
    ```bash
    python -m unittest tests/test_finance_app.py
+
+** Screenshots
+![Screenshot from 2024-11-20 15-39-24](https://github.com/user-attachments/assets/f9a8222a-3e10-4192-8cd4-1e6f51461db9)
+![Screenshot from 2024-11-20 15-50-33](https://github.com/user-attachments/assets/7ec9f0dd-7e6d-48c0-a3ce-13cbe1b910f6)
+![Screenshot from 2024-11-20 15-36-52](https://github.com/user-attachments/assets/b0f179c5-29f1-4c6d-aead-b3eb0e2a2bf5)
+![Screenshot from 2024-11-20 15-41-22](https://github.com/user-attachments/assets/902260fc-04b5-41f2-acf5-929c5d7d6910)
+
